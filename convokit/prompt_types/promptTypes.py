@@ -654,7 +654,7 @@ def transform_embeddings(model, ids, input, side="prompt", filter_empty=True):
     return ids, vects
 
 
-def fit_prompt_type_model(model, n_types, random_state=None, max_dist=0.9, verbosity=0):
+def fit_prompt_type_model(model, n_types, random_state=None, max_dist=0.9, verbosity=0, use_km = True):
     """
 		Standalone function that fits a prompt type model given paired prompt and response inputs. See docstring of the `PromptTypes` class for details.
 
@@ -665,7 +665,16 @@ def fit_prompt_type_model(model, n_types, random_state=None, max_dist=0.9, verbo
 
     if verbosity > 0:
         print("fitting %d prompt types" % n_types)
-    km = KMeans(n_clusters=n_types, random_state=random_state)
+
+
+	if use_km:
+    	print("using kmeans")
+    	km = KMeans(n_clusters=n_types, random_state=random_state)
+	else:
+		print("using GMM with all defaults")
+		from sklearn.mixture import GaussianMixture
+		km = GaussianMixture(n_components=n_types, random_state=random_state)
+
     km.fit(model["U_prompt"])
     prompt_dists = km.transform(model["U_prompt"])
     prompt_clusters = km.predict(model["U_prompt"])
