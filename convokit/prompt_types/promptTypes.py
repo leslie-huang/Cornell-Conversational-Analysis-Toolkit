@@ -601,28 +601,64 @@ def fit_prompt_embedding_model(
     )
     prompt_vect = prompt_tfidf_model.fit_transform(prompt_input)
 
+    print(f"dimensions of ref_input: {len(ref_input)}")
+    print(f"dimensions of prompt_input: {len(prompt_input)}")
+
+    print(f"dimensions of prompt_vect: {prompt_vect.toarray().shape}")
+    print(f"dimensions of ref_vect: {ref_vect.toarray().shape}")
+    print(
+        f"dimensions of normalize(ref_vect.toarray()): {normalize(ref_vect.toarray()).shape}"
+    )
+    # print(f"dimensions of : {}")
+
     if verbosity > 0:
         print("fitting svd model")
+
     # save model before svd
-    print("saving unreduced matrix")
-    np.save(file="out_matrix.npy", arr=ref_vect.T)
+    try:
+        print("saving unreduced, normalized matrix")
+        np.savetxt("unreduced_matrix.npy.gz", normalize(ref_vect.toarray()))
+    except:
+        print("failed to save matrix before SVD")
 
     svd_model = TruncatedSVD(
         n_components=svd__n_components, random_state=random_state, algorithm="arpack"
     )
 
     U_ref = svd_model.fit_transform(normalize(ref_vect.T))
+    print(f"dimensions of U_ref before /s: {U_ref.shape}")
+
     s = svd_model.singular_values_
     U_ref /= s
     U_prompt = (
         svd_model.components_ * normalize(prompt_vect, axis=0) / s[:, np.newaxis]
     ).T
 
+    print(f"dimensions of U_ref: {U_ref.shape}")
+    print(f"dimensions of s: {s.shape}")
+    print(f"dimensions of U_prompt: {U_prompt.shape}")
+
     if snip_first_dim:
         U_prompt = U_prompt[:, 1:]
         U_ref = U_ref[:, 1:]
     U_prompt_norm = normalize(U_prompt)
     U_ref_norm = normalize(U_ref)
+
+    print(f"dimensions of U_prompt_norm: {U_prompt_norm.shape}")
+    print(f"dimensions of U_ref_norm: {U_ref_norm.shape}")
+
+    print("saving SVD components now")
+    try:
+        print("writing U_ref to output file")
+        # fit_transform returns decomposed matrix
+        np.savetxt(f"U_ref_dim{svd__n_components}.npy.gz", U_ref)
+        print("writing U_ref_norm to output file")
+        np.savetxt(f"U_ref_norm_dim{svd__n_components}.npy.gz", U_ref_norm)
+        print("writing U_prompt_norm to output file")
+        np.savetxt(f"U_prompt_norm_dim{svd__n_components}.npy.gz", U_prompt_norm)
+
+    except:
+        print("failed to save svd matrix")
 
     return {
         "prompt_tfidf_model": prompt_tfidf_model,
@@ -654,7 +690,9 @@ def transform_embeddings(model, ids, input, side="prompt", filter_empty=True):
     return ids, vects
 
 
-def fit_prompt_type_model(model, n_types, random_state=None, max_dist=0.9, verbosity=0, use_km = True):
+def fit_prompt_type_model(
+    model, n_types, random_state=None, max_dist=0.9, verbosity=0, use_km=True
+):
     """
 		Standalone function that fits a prompt type model given paired prompt and response inputs. See docstring of the `PromptTypes` class for details.
 
@@ -666,14 +704,15 @@ def fit_prompt_type_model(model, n_types, random_state=None, max_dist=0.9, verbo
     if verbosity > 0:
         print("fitting %d prompt types" % n_types)
 
+    km = KMeans(n_clusters=n_types, random_state=random_state)
 
-	if use_km:
-    	print("using kmeans")
-    	km = KMeans(n_clusters=n_types, random_state=random_state)
-	else:
-		print("using GMM with all defaults")
-		from sklearn.mixture import GaussianMixture
-		km = GaussianMixture(n_components=n_types, random_state=random_state)
+    # if use_km:
+    # 	print("using kmeans")
+    # 	km = KMeans(n_clusters=n_types, random_state=random_state)
+    # else:
+    # 	print("using GMM with all defaults")
+    # 	from sklearn.mixture import GaussianMixture
+    # 	km = GaussianMixture(n_components=n_types, random_state=random_state)
 
     km.fit(model["U_prompt"])
     prompt_dists = km.transform(model["U_prompt"])
