@@ -73,7 +73,7 @@ class PromptTypes(Transformer):
         prompt__tfidf_max_df=0.1,
         ref__tfidf_min_df=100,
         ref__tfidf_max_df=0.1,
-        snip_first_dim=True,
+        snip_first_dim=False,
         svd__n_components=25,
         max_dist=0.9,
         random_state=None,
@@ -579,6 +579,23 @@ def fit_prompt_embedding_model(
 		:param ref_input: list of responses (represented as space-separated strings of terms). note that each entry of ref_input should be a response to the corresponding entry in prompt_input.
 		:return: prompt embedding model
 	"""
+    import pickle
+
+    rank_label = f"rank_{svd__n_components}"
+
+    if snip_first_dim:
+        snip_label = "snip"
+    else:
+        snip_label = "nosnip"
+
+    try:
+        print("saving raw inputs")
+        with open(f"ref_input_{rank_label}_{snip_label}.pkl", "wb") as f:
+            pickle.dump(ref_input, f)
+        with open(f"prompt_input_{rank_label}_{snip_label}.pkl", "wb") as f:
+            pickle.dump(prompt_input, f)
+    except:
+        print("failed to save raw inputs")
 
     if verbosity > 0:
         print("fitting %d input pairs" % len(prompt_input))
@@ -601,23 +618,29 @@ def fit_prompt_embedding_model(
     )
     prompt_vect = prompt_tfidf_model.fit_transform(prompt_input)
 
-    print(f"dimensions of ref_input: {len(ref_input)}")
-    print(f"dimensions of prompt_input: {len(prompt_input)}")
-
-    print(f"dimensions of prompt_vect: {prompt_vect.toarray().shape}")
-    print(f"dimensions of ref_vect: {ref_vect.toarray().shape}")
-    print(
-        f"dimensions of normalize(ref_vect.toarray()): {normalize(ref_vect.toarray()).shape}"
-    )
-    # print(f"dimensions of : {}")
-
     if verbosity > 0:
         print("fitting svd model")
+
+    try:
+        print("saving tf idf models")
+        with open(f"ref_tfidf_model_{rank_label}_{snip_label}.pkl", "wb") as f:
+            pickle.dump(ref_tfidf_model, f)
+        with open(f"prompt_tfidf_model_{rank_label}_{snip_label}.pkl", "wb") as f:
+            pickle.dump(prompt_tfidf_model, f)
+    except:
+        print("failed to save tf-idf models")
 
     # save model before svd
     try:
         print("saving unreduced, normalized matrix")
-        np.savetxt("unreduced_matrix.npy.gz", normalize(ref_vect.toarray()))
+        np.savetxt(
+            f"unreduced_ref_matrix_{rank_label}_{snip_label}.npy.gz",
+            normalize(ref_vect.toarray()),
+        )
+        np.savetxt(
+            f"unreduced_prompt_matrix_{rank_label}_{snip_label}.npy.gz",
+            normalize(prompt_vect.toarray()),
+        )
     except:
         print("failed to save matrix before SVD")
 
@@ -626,17 +649,11 @@ def fit_prompt_embedding_model(
     )
 
     U_ref = svd_model.fit_transform(normalize(ref_vect.T))
-    print(f"dimensions of U_ref before /s: {U_ref.shape}")
-
     s = svd_model.singular_values_
     U_ref /= s
     U_prompt = (
         svd_model.components_ * normalize(prompt_vect, axis=0) / s[:, np.newaxis]
     ).T
-
-    print(f"dimensions of U_ref: {U_ref.shape}")
-    print(f"dimensions of s: {s.shape}")
-    print(f"dimensions of U_prompt: {U_prompt.shape}")
 
     if snip_first_dim:
         U_prompt = U_prompt[:, 1:]
@@ -644,18 +661,17 @@ def fit_prompt_embedding_model(
     U_prompt_norm = normalize(U_prompt)
     U_ref_norm = normalize(U_ref)
 
-    print(f"dimensions of U_prompt_norm: {U_prompt_norm.shape}")
-    print(f"dimensions of U_ref_norm: {U_ref_norm.shape}")
-
     print("saving SVD components now")
     try:
         print("writing U_ref to output file")
         # fit_transform returns decomposed matrix
-        np.savetxt(f"U_ref_dim{svd__n_components}.npy.gz", U_ref)
+        np.savetxt(f"U_ref_{rank_label}_{snip_label}.npy.gz", U_ref)
         print("writing U_ref_norm to output file")
-        np.savetxt(f"U_ref_norm_dim{svd__n_components}.npy.gz", U_ref_norm)
+        np.savetxt(f"U_ref_norm_{rank_label}_{snip_label}.npy.gz", U_ref_norm)
         print("writing U_prompt_norm to output file")
-        np.savetxt(f"U_prompt_norm_dim{svd__n_components}.npy.gz", U_prompt_norm)
+        np.savetxt(f"U_prompt_norm_{rank_label}_{snip_label}.npy.gz", U_prompt_norm)
+        print("writing Sigma to output file")
+        np.savetxt(f"Sigma_{rank_label}_{snip_label}.npy.gz", s)
 
     except:
         print("failed to save svd matrix")
@@ -755,4 +771,3 @@ def assign_prompt_types(model, ids, vects, max_dist=0.9):
         columns=list(range(dists.shape[1])) + ["type_id"],
     )
     return df
-
