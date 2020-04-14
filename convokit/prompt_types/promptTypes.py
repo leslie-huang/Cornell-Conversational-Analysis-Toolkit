@@ -73,7 +73,7 @@ class PromptTypes(Transformer):
         prompt__tfidf_max_df=0.1,
         ref__tfidf_min_df=100,
         ref__tfidf_max_df=0.1,
-        snip_first_dim=False,
+        snip_first_dim=True,
         svd__n_components=25,
         max_dist=0.9,
         random_state=None,
@@ -672,6 +672,11 @@ def fit_prompt_embedding_model(
         np.savetxt(f"U_prompt_norm_{rank_label}_{snip_label}.npy.gz", U_prompt_norm)
         print("writing Sigma to output file")
         np.savetxt(f"Sigma_{rank_label}_{snip_label}.npy.gz", s)
+        print("saving explained variance")
+        np.savetxt(
+            f"ExplainedVariance__{rank_label}_{snip_label}.npy.gz",
+            svd_model.explained_variance_ratio_,
+        )
 
     except:
         print("failed to save svd matrix")
@@ -722,13 +727,8 @@ def fit_prompt_type_model(
 
     km = KMeans(n_clusters=n_types, random_state=random_state)
 
-    # if use_km:
-    # 	print("using kmeans")
-    # 	km = KMeans(n_clusters=n_types, random_state=random_state)
-    # else:
-    # 	print("using GMM with all defaults")
-    # 	from sklearn.mixture import GaussianMixture
-    # 	km = GaussianMixture(n_components=n_types, random_state=random_state)
+    # from sklearn.mixture import GaussianMixture
+    # km = GaussianMixture(n_components=n_types, random_state=random_state)
 
     km.fit(model["U_prompt"])
     prompt_dists = km.transform(model["U_prompt"])
