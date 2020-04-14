@@ -9,16 +9,16 @@ from .hypergraph import Hypergraph
 degree_stat_funcs = {
     "max": np.max,
     "argmax": np.argmax,
-    "norm.max": lambda l: np.max(l) / np.sum(l),
+    "norm.max": lambda l: np.max(l) / np.sum(l) if np.sum(l) > 0 else 0,
     "2nd-largest": lambda l: np.partition(l, -2)[-2] if len(l) > 1 else np.nan,
     "2nd-argmax": lambda l: (-l).argsort()[1] if len(l) > 1 else np.nan,
-    "norm.2nd-largest": lambda l: np.partition(l, -2)[-2] / np.sum(l) if len(l) > 1 else np.nan,
+    "norm.2nd-largest": lambda l: np.partition(l, -2)[-2] / np.sum(l) if (len(l) > 1 and np.sum(l) > 0) else np.nan,
     "mean": np.mean,
-    "mean-nonzero": lambda l: np.mean(l[l != 0]),
+    "mean-nonzero": lambda l: np.mean(l[l != 0]) if len(l[l != 0]) > 0 else 0,
     "prop-nonzero": lambda l: np.mean(l != 0),
-    "prop-multiple": lambda l: np.mean(l[l != 0] > 1),
-    "entropy": scipy.stats.entropy,
-    "2nd-largest / max": lambda l: np.partition(l, -2)[-2] / np.max(l) if len(l) > 1 else np.nan
+    "prop-multiple": lambda l: np.mean(l[l != 0] > 1) if len(l[l !=0] > 1) > 0 else 0,
+    "entropy": lambda l: scipy.stats.entropy(l) if np.sum(l) > 0 else np.nan,
+    "2nd-largest / max": lambda l: np.partition(l, -2)[-2] / np.max(l) if (len(l) > 1 and np.sum(l) > 0) else np.nan
 }
 
 motif_stat_funcs = {
@@ -110,15 +110,18 @@ class HyperConvo(Transformer):
         stats = {}
         for from_hyper in [False, True]:
             for to_hyper in [False, True]:
-                if not from_hyper and to_hyper: continue  # skip c -> C
-                outdegrees = np.array(graph.outdegrees(from_hyper, to_hyper))
+                if not from_hyper and to_hyper: continue # skip c->C
+                if from_hyper:
+                    outdegrees = np.array(graph.outdegrees(from_hyper, to_hyper))
                 indegrees = np.array(graph.indegrees(from_hyper, to_hyper))
 
                 for stat, stat_func in degree_stat_funcs.items():
-                    stats["{}[outdegree over {}->{} {}responses]".format(stat,
-                                                                         HyperConvo._node_type_name(from_hyper),
-                                                                         HyperConvo._node_type_name(to_hyper),
-                                                                         name_ext)] = stat_func(outdegrees)
+                    if from_hyper:
+                        stats["{}[outdegree over {}->{} {}responses]".format(stat,
+                                                                     HyperConvo._node_type_name(from_hyper),
+                                                                     HyperConvo._node_type_name(to_hyper),
+                                                                     name_ext)] = stat_func(outdegrees)
+
                     stats["{}[indegree over {}->{} {}responses]".format(stat,
                                                                         HyperConvo._node_type_name(from_hyper),
                                                                         HyperConvo._node_type_name(to_hyper),
