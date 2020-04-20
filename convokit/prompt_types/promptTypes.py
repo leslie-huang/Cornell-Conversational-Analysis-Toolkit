@@ -727,21 +727,15 @@ def fit_prompt_type_model(
 
     km = KMeans(n_clusters=n_types, random_state=random_state)
 
-    # from sklearn.mixture import GaussianMixture
-
-    # km = GaussianMixture(n_components=n_types, random_state=random_state)
-
     km.fit(model["U_prompt"])
     prompt_dists = km.transform(model["U_prompt"])
-    # prompt_dists = km.predict_proba(model["U_prompt"])
     prompt_clusters = km.predict(model["U_prompt"])
+
     prompt_clusters[prompt_dists.min(axis=1) >= max_dist] = -1
     ref_dists = km.transform(model["U_ref"])
-    # ref_dists = km.predict_proba(model["U_ref"])
-    # print(ref_dists.shape)
     ref_clusters = km.predict(model["U_ref"])
+
     ref_clusters[ref_dists.min(axis=1) >= max_dist] = -1
-    # print(ref_clusters[:, np.newaxis].shape)
 
     prompt_df = pd.DataFrame(
         index=model["prompt_tfidf_model"].get_feature_names(),
@@ -767,10 +761,40 @@ def assign_prompt_types(model, ids, vects, max_dist=0.9):
 	"""
 
     dists = model["km_model"].transform(vects)
-    # dists = model["km_model"].predict_proba(vects)
     clusters = model["km_model"].predict(vects)
+
+    from sklearn.metrics import silhouette_samples, silhouette_score
+
+    sscore_mean = silhouette_score(X=vects, labels=clusters)
+    ssample_all = silhouette_samples(X=vects, labels=clusters)
+
     dist_mask = dists.min(axis=1) >= max_dist
     clusters[dist_mask] = -1
+
+    # after dropping unassigned
+    sscore_distmask_mean = silhouette_score(
+        X=vects[~dist_mask], labels=clusters[~dist_mask]
+    )
+    ssample_distmask = silhouette_samples(
+        X=vects[~dist_mask], labels=clusters[~dist_mask]
+    )
+
+    k = model["km_model"].cluster_centers_.shape[0]
+    silhouette_dict = {
+        "k": k,
+        "silhouette_all_mean": sscore_mean,
+        "silhouette_masked_mean": sscore_distmask_mean,
+        "silhouette_samp_all": ssample_all,
+        "silhouette_samp_masked": ssample_distmask,
+        "orig_data": vects,
+        "mask": dist_mask,
+    }
+    import pickle
+
+    # this function is called for prompts and responses in same model, so use ids[1] to differentiate
+    with open(f"k{k}_{ids[1][-1]}_silhouette.pkl", "wb") as f:
+        pickle.dump(silhouette_dict, f)
+
     df = pd.DataFrame(
         index=ids,
         data=np.hstack([dists, clusters[:, np.newaxis]]),
