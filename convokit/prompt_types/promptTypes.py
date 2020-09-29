@@ -6,7 +6,8 @@ from sklearn.preprocessing import normalize
 from sklearn.decomposition import TruncatedSVD
 from sklearn.cluster import KMeans
 import joblib
-
+import pickle
+from sklearn.metrics import silhouette_samples, silhouette_score
 from convokit.transformer import Transformer
 
 
@@ -740,6 +741,24 @@ def fit_prompt_embedding_model(
     :return: prompt embedding model
     """
 
+    # LH start
+    rank_label = f"rank_{svd__n_components}"
+
+    if snip_first_dim:
+        snip_label = "snip"
+    else:
+        snip_label = "nosnip"
+
+    try:
+        print("saving raw inputs")
+        with open(f"ref_input_{rank_label}_{snip_label}.pkl", "wb") as f:
+            pickle.dump(reference_input, f)
+        with open(f"prompt_input_{rank_label}_{snip_label}.pkl", "wb") as f:
+            pickle.dump(prompt_input, f)
+    except:
+        print("failed to save raw inputs")
+    ## LH end
+
     if verbosity > 0:
         print("fitting %d input pairs" % len(prompt_input))
         print("fitting reference tfidf model")
@@ -760,6 +779,33 @@ def fit_prompt_embedding_model(
         token_pattern=r"(?u)(\S+)",
     )
     prompt_vect = prompt_tfidf_model.fit_transform(prompt_input)
+
+    ## LH start
+    try:
+        print("saving tf idf models")
+        with open(f"ref_tfidf_model_{rank_label}_{snip_label}.pkl", "wb") as f:
+            pickle.dump(reference_tfidf_model, f)
+        with open(
+            f"prompt_tfidf_model_{rank_label}_{snip_label}.pkl", "wb"
+        ) as f:
+            pickle.dump(prompt_tfidf_model, f)
+    except:
+        print("failed to save tf-idf models")
+
+    # save model before svd
+    try:
+        print("saving unreduced, normalized matrix")
+        np.savetxt(
+            f"unreduced_ref_matrix_{rank_label}_{snip_label}.npy.gz",
+            normalize(reference_vect.toarray()),
+        )
+        np.savetxt(
+            f"unreduced_prompt_matrix_{rank_label}_{snip_label}.npy.gz",
+            normalize(prompt_vect.toarray()),
+        )
+    except:
+        print("failed to save matrix before SVD")
+    ## LH end
 
     if verbosity > 0:
         print("fitting svd model")
@@ -783,6 +829,32 @@ def fit_prompt_embedding_model(
         U_reference = U_reference[:, 1:]
     U_prompt_norm = normalize(U_prompt)
     U_reference_norm = normalize(U_reference)
+
+    # LH start
+    print("saving SVD components now")
+    try:
+        print("writing U_ref to output file")
+        # fit_transform returns decomposed matrix
+        np.savetxt(f"U_ref_{rank_label}_{snip_label}.npy.gz", U_reference)
+        print("writing U_ref_norm to output file")
+        np.savetxt(
+            f"U_ref_norm_{rank_label}_{snip_label}.npy.gz", U_reference_norm
+        )
+        print("writing U_prompt_norm to output file")
+        np.savetxt(
+            f"U_prompt_norm_{rank_label}_{snip_label}.npy.gz", U_prompt_norm
+        )
+        print("writing Sigma to output file")
+        np.savetxt(f"Sigma_{rank_label}_{snip_label}.npy.gz", s)
+        print("saving explained variance")
+        np.savetxt(
+            f"ExplainedVariance__{rank_label}_{snip_label}.npy.gz",
+            svd_model.explained_variance_ratio_,
+        )
+
+    except:
+        print("failed to save svd matrix")
+    # LH end
 
     return {
         "prompt_tfidf_model": prompt_tfidf_model,
@@ -867,8 +939,42 @@ def assign_prompt_types(model, ids, vects, max_dist=0.9):
 
     dists = model["km_model"].transform(vects)
     clusters = model["km_model"].predict(vects)
+
+    ## LH compute silhouette scores and objective function score for model selection
+    sscore_mean = silhouette_score(X=vects, labels=clusters)
+    ssample_all = silhouette_samples(X=vects, labels=clusters)
+    obj_score = model["km_model"].score(X=vects)
+    ## LH end
+
     dist_mask = dists.min(axis=1) >= max_dist
     clusters[dist_mask] = -1
+
+    # LH after dropping unassigned
+    sscore_distmask_mean = silhouette_score(
+        X=vects[~dist_mask], labels=clusters[~dist_mask]
+    )
+    ssample_distmask = silhouette_samples(
+        X=vects[~dist_mask], labels=clusters[~dist_mask]
+    )
+
+    k = model["km_model"].cluster_centers_.shape[0]
+    silhouette_dict = {
+        "k": k,
+        "silhouette_all_mean": sscore_mean,
+        "silhouette_masked_mean": sscore_distmask_mean,
+        "silhouette_samp_all": ssample_all,
+        "silhouette_samp_masked": ssample_distmask,
+        # "orig_data": vects,
+        "obj_score": obj_score,
+        "mask": dist_mask,
+    }
+
+    # this function is called for prompts and responses in same model,
+    # so use ids[1] to get a Q or A to differentiate the filenames
+    with open(f"k{k}_{ids[1][-1]}_silhouette.pkl", "wb") as f:
+        pickle.dump(silhouette_dict, f)
+    # LH end
+
     df = pd.DataFrame(
         index=ids,
         data=np.hstack([dists, clusters[:, np.newaxis]]),
