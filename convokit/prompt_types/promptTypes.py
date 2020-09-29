@@ -767,6 +767,7 @@ def assign_prompt_types(model, ids, vects, max_dist=0.9):
 
     sscore_mean = silhouette_score(X=vects, labels=clusters)
     ssample_all = silhouette_samples(X=vects, labels=clusters)
+    obj_score = model["km_model"].score(X=vects)
 
     dist_mask = dists.min(axis=1) >= max_dist
     clusters[dist_mask] = -1
@@ -786,7 +787,8 @@ def assign_prompt_types(model, ids, vects, max_dist=0.9):
         "silhouette_masked_mean": sscore_distmask_mean,
         "silhouette_samp_all": ssample_all,
         "silhouette_samp_masked": ssample_distmask,
-        "orig_data": vects,
+        # "orig_data": vects,
+        "obj_score": obj_score,
         "mask": dist_mask,
     }
     import pickle
