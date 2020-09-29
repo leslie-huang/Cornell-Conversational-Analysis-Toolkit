@@ -9,10 +9,10 @@ Wang, Xuewei, Weiyan Shi, Richard Kim, Yoojung Oh, Sijia Yang, Jingwen Zhang, an
 Dataset details
 ---------------
 
-User-level information
-^^^^^^^^^^^^^^^^^^^^^^
+Speaker-level information
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
-There are 1285 users in this dataset. Users are workers on Amazon Mechanical Turk. Each user has associated metadata from pre-task psychological surveys, as well as demographic information:
+There are 1285 users in this dataset. Speakers are workers on Amazon Mechanical Turk. Each user has associated metadata from pre-task psychological surveys, as well as demographic information:
 
 **Demographics**
 
@@ -75,9 +75,9 @@ Utterance-level information
 Each utterance corresponds to a turn in a dialogue.
 
 * id: index of the utterance
-* user: the author of the utterance
-* root: the index of the first utterance in the dialogue (and hence the conversation id)
-* reply_to: the index of the utterance to which this utterance is a reply (None if the utterance is at the root)
+* speaker: the author of the utterance
+* conversation_id: id of the first utterance in the dialogue this utterance belongs to
+* reply_to: the id of the utterance to which this utterance is a reply (None if the utterance starts the conversation)
 * text: content of the utterance
 
 Additional metadata includes:
@@ -120,7 +120,7 @@ To download directly with ConvoKit:
 For some quick stats:
 
 >>> corpus.print_summary_stats()
-Number of Users: 1285
+Number of Speakers: 1285
 Number of Utterances: 20932
 Number of Conversations: 1017
 

@@ -19,10 +19,10 @@ Coarse Discourse, the Reddit dataset that contains ~9K threads, with comments an
 Dataset details
 ---------------
 
-User-level information
-^^^^^^^^^^^^^^^^^^^^^^
+Speaker-level information
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Users in this Corpus are Reddit users, with their name being their Reddit username. Users who deleted their accounts have their name listed as ‘[deleted]’. 
+Speakers in this Corpus are Reddit users, with their name being their Reddit username. Speakers who deleted their accounts have their name listed as ‘[deleted]’.
 
 
 Utterance-level information
@@ -31,9 +31,9 @@ Utterance-level information
 Each utterance represents either a top-level Reddit post or a comment on a post. For each utterance, we provide: 
 
 * id: unique_id of the utterance. This is the Reddit ID of the post or comment; posts start with t3 and comments with t1
-* user: author of the post/comment as an object
-* root: root id/post id that the comment belongs to. For posts, this is the same as id
-* reply_to: the comment/post that it replies to
+* speaker: author of the post/comment
+* conversation_id: id of the first utterance in the conversation this utterance belongs to. For post utterances, the conversation_id is the same as the utterance id
+* reply_to: the id of the comment/post that this utterance replies to
 * text:  textual content of the utterance, none if there is no body in the text
 
 
@@ -66,12 +66,11 @@ To download directly with ConvoKit:
 
 Some stats on the data set:
 
->>> len(corpus.get_utterance_ids()) 
-115827
->>> len(corpus.get_usernames())
-63573
->>> len(corpus.get_conversation_ids())
-9483
+>>> corpus.print_summary_stats()
+Number of Speakers: 63573
+Number of Utterances: 115827
+Number of Conversations: 9483
+
 
 Additional notes
 ----------------

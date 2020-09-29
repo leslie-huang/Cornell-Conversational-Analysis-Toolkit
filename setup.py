@@ -6,7 +6,7 @@ setup(
     author_email="cristian@cs.cornell.edu",
     url="https://github.com/CornellNLP/Cornell-Conversational-Analysis-Toolkit",
     description="Cornell Conversational Analysis Toolkit",
-    version="2.3.0.5.custom",
+    version="2.4.2",
     packages=[
         "convokit",
         "convokit.bag_of_words",
@@ -25,8 +25,8 @@ setup(
         "convokit.prompt_types",
         "convokit.ranker",
         "convokit.text_processing",
-        "convokit.user_convo_helpers",
-        "convokit.userConvoDiversity",
+        "convokit.speaker_convo_helpers",
+        "convokit.speakerConvoDiversity",
     ],
     package_data={"convokit": ["data/*.txt"]},
     install_requires=[
@@ -43,4 +43,10 @@ setup(
         "unidecode>=1.1.1",
     ],
     extras_require={"craft": ["torch>=0.12"]},
+    classifiers=[
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+    ],
 )

@@ -1,11 +1,12 @@
-from convokit.model import Corpus, Conversation, Utterance, User, CorpusObject
-from typing import List, Union, Callable
+from convokit.model import Corpus, CorpusComponent
+from typing import List, Callable
 import pandas as pd
 from scipy.sparse import csr_matrix
 import numpy as np
-from convokit.model import warn
+from convokit.util import warn
 
-def extract_feats_from_obj(obj: CorpusObject, pred_feats: List[str]):
+
+def extract_feats_from_obj(obj: CorpusComponent, pred_feats: List[str]):
     """
     Assuming feature data has at most one level of nesting, i.e. meta['height'] = 1, and meta['grades'] = {'prelim1': 99,
     'prelim2': 75, 'final': 100}
@@ -25,7 +26,7 @@ def extract_feats_from_obj(obj: CorpusObject, pred_feats: List[str]):
 
 
 def extract_feats_dict(corpus: Corpus, obj_type: str, pred_feats: List[str],
-                       selector: Callable[[CorpusObject], bool] = lambda x: True):
+                       selector: Callable[[CorpusComponent], bool] = lambda x: True):
     """
     Extract features dictionary from a corpus
     :param corpus: target corpus
@@ -40,7 +41,7 @@ def extract_feats_dict(corpus: Corpus, obj_type: str, pred_feats: List[str],
 
 
 def extract_feats(corpus: Corpus, obj_type: str, pred_feats: List[str],
-                  selector: Callable[[CorpusObject], bool] = lambda x: True):
+                  selector: Callable[[CorpusComponent], bool] = lambda x: True):
     """
     Extract a matrix representation of Corpus objects' features from corpus
     :param corpus: target corpus
@@ -54,8 +55,8 @@ def extract_feats(corpus: Corpus, obj_type: str, pred_feats: List[str],
     return csr_matrix(feats_df.values)
 
 
-def extract_label_dict(corpus: Corpus, obj_type: str, labeller: Callable[[CorpusObject], bool],
-                       selector: Callable[[CorpusObject], bool] = lambda x: True):
+def extract_label_dict(corpus: Corpus, obj_type: str, labeller: Callable[[CorpusComponent], bool],
+                       selector: Callable[[CorpusComponent], bool] = lambda x: True):
     """
     Generate dictionary mapping Corpus object id to label from corpus
     :param corpus: target corpus
@@ -72,8 +73,8 @@ def extract_label_dict(corpus: Corpus, obj_type: str, labeller: Callable[[Corpus
 
 
 def extract_feats_and_label(corpus: Corpus, obj_type: str, pred_feats: List[str],
-                            labeller: Callable[[CorpusObject], bool],
-                            selector: Callable[[CorpusObject], bool] = None):
+                            labeller: Callable[[CorpusComponent], bool],
+                            selector: Callable[[CorpusComponent], bool] = None):
     """
     Extract matrix of predictive features and numpy array of labels from corpus
     :param corpus: target Corpus
@@ -93,8 +94,27 @@ def extract_feats_and_label(corpus: Corpus, obj_type: str, pred_feats: List[str]
 
     y = X_y_df['y']
     X = X_y_df.drop(columns='y')
+    X = X.astype('float64')
 
     return csr_matrix(X.values), np.array(y)
+
+
+def extract_vector_feats_and_label(corpus, obj_type, vector_name, columns, labeller, selector):
+    # if ((corpus is None) and (objs is None)) or ((corpus is not None) and (objs is not None)):
+    #     raise ValueError("This function takes in either a Corpus or a list of speakers / utterances / conversations")
+    #
+    # if corpus:
+    #     print("Using corpus objects...")
+    #     objs = list(corpus.iter_objs(obj_type, selector))
+    # else:
+    #     assert objs is not None
+    #     print("Using input list of corpus objects...")
+    objs = list(corpus.iter_objs(obj_type, selector))
+    obj_ids = [obj.id for obj in objs]
+    y = np.array([labeller(obj) for obj in objs])
+    X = corpus.get_vector_matrix(vector_name).get_vectors(obj_ids, columns)
+
+    return X, y
 
 
 def get_coefs_helper(clf, feature_names: List[str] = None, coef_func=None):
@@ -110,7 +130,7 @@ def get_coefs_helper(clf, feature_names: List[str] = None, coef_func=None):
             coefs = clf.named_steps['logreg'].coef_[0].tolist()
         except AttributeError:
             warn("Classifier is not a pipeline with a logistic regression component, so default coefficient getter function"
-                  "did not work. Choose a valid coef_func argument.")
+                 " did not work. Choose a valid coef_func argument.")
             return
     else:
         coefs = coef_func(clf)

@@ -11,10 +11,10 @@ IJCAI workshop on NLP meets Journalism, 2016.
 Dataset details
 ---------------
 
-User-level information
-^^^^^^^^^^^^^^^^^^^^^^
+Speaker-level information
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Users in this dataset are tennis professional players, represented by their real names. As this dataset do not contain information about individual reporters, we use a single pseudo user with username "REPORTER" to represent them. 
+Speakers in this dataset are tennis professional players, represented by their real names. As this dataset do not contain information about individual reporters, we use a single pseudo user with username "REPORTER" to represent them.
 
 For each player, additional metadata include:
 
@@ -27,9 +27,9 @@ Utterance-level information
 Each question or answer is viewed as an utterance. For each utterance, we provide:
 
 * id: index of the utterance
-* user: the user who author the utterance
-* root: index of the conversation root of the utterance
-* reply_to: index of the utterance to which this utterance replies to (None if the utterance is not a reply)
+* speaker: the speaker who authored the utterance
+* conversation_id: id of the first utterance in the conversation this utterance belongs to
+* reply_to: id of the utterance to which this utterance replies to (None if the utterance is not a reply)
 * timestamp: time of the utterance
 * text: textual content of the utterance
 
@@ -46,7 +46,7 @@ Conversational-level information
 
 Each round of question-answer pair is considered as a conversation. Metadata associated with conversations include additional information about the match for which the post-match interview is held: 
 
-* match_id: index of the match in the original dataset
+* match_id: id of the match in the original dataset
 * opponent: opponent in the match (available only if the opponent has at least one interview recorded in our dataset)
 * result: outcome of the match (1 indicates the player being interviewed has won the match; 0 otherwise)
 * stage: stage of the tournament (e.g., 'The Final')
@@ -66,12 +66,10 @@ To download directly with ConvoKit:
 
 For some quick stats:
 
->>> len(corpus.get_utterance_ids()) 
-163948
->>> len(corpus.get_usernames())
-359
->>> len(corpus.get_conversation_ids())
-81974
+>>> corpus.print_summary_stats()
+Number of Speakers: 359
+Number of Utterances: 163948
+Number of Conversations: 81974
 
 Additional note
 ---------------

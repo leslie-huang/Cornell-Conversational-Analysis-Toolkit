@@ -6,12 +6,12 @@ import datetime
 MaxUtterances = -1
 
 KeyId = "id"
-KeyUser = "user"
-KeyConvoRoot = "root"
+KeySpeaker = "speaker"
+KeyConvoRoot = "conversation_id"
 KeyReplyTo = "reply-to"
 KeyTimestamp = "timestamp"
 KeyText = "text"
-KeyUserInfo = "meta"
+KeySpeakerInfo = "meta"
 
 genders = {}
 edit_counts = {}
@@ -54,7 +54,7 @@ with open("wikipedia.talkpages.conversations.dat", "r", encoding="utf-8") as f:
                 is_admin = False
                 if user in admins and float(timestamp) > admins[user]:
                     is_admin = True
-                    #user += "{admin}"
+                    #speaker += "{admin}"
                     uniq_admins.add(user)
 
                 is_admin_glob = is_admin
@@ -70,11 +70,11 @@ with open("wikipedia.talkpages.conversations.dat", "r", encoding="utf-8") as f:
 
                 d = {
                     KeyId: fields[0],
-                    KeyUser: user,
+                    KeySpeaker: user,
                     KeyConvoRoot: fields[3],
                     KeyTimestamp: timestamp,
                     KeyText: fields[7],
-                    KeyUserInfo: {
+                    KeySpeakerInfo: {
                         "is-admin": is_admin
                     }
                 }
@@ -93,14 +93,14 @@ with open("wikipedia.talkpages.conversations.dat", "r", encoding="utf-8") as f:
 #udict = {u["id"]: u for u in utterances}
 #for i, u in enumerate(utterances):
 #    if KeyReplyTo in u:
-#        target = udict[u[KeyReplyTo]][KeyUser]
-#        #u[KeyConvoRoot] = u[KeyUser] + "->" + (
+#        target = udict[u[KeyReplyTo]][KeySpeaker]
+#        #u[KeyConvoId] = u[KeySpeaker] + "->" + (
 #        #    "{admin}" if target.endswith("{admin}") else "{nonadmin}")  # target groups
-#        #u[KeyConvoRoot] = target  # target groups -- experimental
-#        u[KeyConvoRoot] = u[KeyUser]  # speaker groups
+#        #u[KeyConvoId] = target  # target groups -- experimental
+#        u[KeyConvoId] = u[KeySpeaker]  # speaker groups
 #        utterances[i] = u
 #    else:
-#        del utterances[i][KeyConvoRoot]
+#        del utterances[i][KeyConvoId]
 
 ips = set()
 for user in usernames:
@@ -115,7 +115,7 @@ if MaxUtterances > 0:
 json.dump(utterances, open("utterances.json", "w"), indent=2,
           sort_keys=True)
 
-with open("users.json", "w") as f:
+with open("speakers.json", "w") as f:
     json.dump(users_meta, f, indent=2)
 
 print(len(uniq_admins), "admins")

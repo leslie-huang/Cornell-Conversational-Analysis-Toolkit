@@ -13,10 +13,10 @@ A full description of the dataset can be found `here <https://zenodo.org/record/
 Dataset details
 ---------------
 
-User-level information
-^^^^^^^^^^^^^^^^^^^^^^
+Speaker-level information
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
-User names have been anonymized randomly to 'developer_#' where '#' is a number between 1 and 4842.
+Speaker names have been anonymized randomly to 'developer_#' where '#' is a number between 1 and 4842.
 
 Additional metadata includes:
 
@@ -28,9 +28,9 @@ Utterance-level information
 Each utterance corresponds to a comment in the Chromium project.
 
 * id: index of the utterance
-* user: the user who authored the utterance
-* root: index of the conversation root of the utterance
-* reply_to: index of the utterance to which this utterance replies to (None if the utterance is not a reply)
+* speaker: the speaker who authored the utterance
+* conversation_id: id of the first utterance in the conversation this utterance belongs to
+* reply_to: id of the utterance to which this utterance replies to (None if the utterance is not a reply)
 * timestamp: time of the utterance
 * text: textual content of the utterance
 
@@ -71,7 +71,7 @@ To download directly with ConvoKit:
 For some quick stats:
 
 >>> corpus.print_summary_stats()
-Number of Users: 4842
+Number of Speakers: 4842
 Number of Utterances: 2853498
 Number of Conversations: 1484843
 
