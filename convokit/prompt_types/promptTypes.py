@@ -193,11 +193,8 @@ class PromptTypes(Transformer):
         :return: the corpus, with per-utterance representations and type assignments.
         """
         if use_fit_selectors:
-            try:
-                prompt_selector = self.prompt_selector
-                reference_selector = self.reference_selector
-            except:
-                print("self.prompt_selector or self.reference_selector issue")
+            prompt_selector = self.prompt_selector
+            reference_selector = self.reference_selector
         prompt_ids, prompt_vects, reference_ids, reference_vects = self._get_embeddings(
             corpus, prompt_selector, reference_selector
         )
