@@ -671,11 +671,16 @@ class PromptTypes(Transformer):
             input = utterance.retrieve_meta(field)
             if isinstance(input, list):
                 input = "\n".join(input)
-            if filter_fn(utterance) and (
-                (not check_nonempty) or (len(input) > 0)
-            ):
-                ids.append(utterance.id)
-                inputs.append(input)
+            try:
+                if filter_fn(utterance) and (
+                    (not check_nonempty) or (len(input) > 0)
+                ):
+                    ids.append(utterance.id)
+                    inputs.append(input)
+            except TypeError as e:
+                print(e)
+                print(utterance)
+                print(input)
         return ids, inputs
 
     def _get_pair_input(
