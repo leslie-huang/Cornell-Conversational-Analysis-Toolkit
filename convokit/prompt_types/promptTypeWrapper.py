@@ -9,7 +9,7 @@ from convokit.model import Utterance
 import os
 
 class PromptTypeWrapper(Transformer):
-	"""	
+	"""
 	This is a wrapper class implementing a pipeline that infers types of rhetorical intentions encapsulated by utterances in a corpus, in terms of their anticipated responses.
 
 	The pipeline involves:
@@ -38,35 +38,35 @@ class PromptTypeWrapper(Transformer):
 	:param verbosity: frequency of status messages.
 
 	"""
-	
+
 	def __init__(self, output_field='prompt_types', n_types=8, use_prompt_motifs=True, root_only=True,
 				questions_only=True, enforce_caps=True, recompute_all=False, min_support=100,
 				 min_df=100, svd__n_components=25, max_df=.1,
 					max_dist=.9,
-				 random_state=None, verbosity=10000, 
+				 random_state=None, verbosity=10000,
 				):
 		self.use_motifs = use_prompt_motifs
 		self.random_state=random_state
 		pipe = [
-			('parser', TextParser(verbosity=verbosity, 
+			('parser', TextParser(verbosity=verbosity,
 				 input_filter=lambda utt, aux: recompute_all or (utt.get_info('parsed') is None))),
-			('censor_nouns', CensorNouns('parsed_censored', 
+			('censor_nouns', CensorNouns('parsed_censored',
 				 input_filter=lambda utt, aux: recompute_all or (utt.get_info('parsed_censored') is None),
 										 verbosity=verbosity)),
 			('shallow_arcs', TextToArcs('arcs', input_field='parsed_censored',
 				input_filter=lambda utt, aux: recompute_all or (utt.get_info('arcs') is None),
 									   root_only=root_only, verbosity=verbosity))
-			
+
 		]
-		
+
 		if questions_only:
 			pipe.append(
 				('question_sentence_filter', QuestionSentences('question_arcs',
-									input_field='arcs', 
+									input_field='arcs',
 								   input_filter=lambda utt, aux: recompute_all or utt.meta['is_question'],
 									use_caps=enforce_caps, verbosity=verbosity))
 			)
-		
+
 			prompt_input_field = 'question_arcs'
 			self.prompt_selector = lambda utt: utt.meta['is_question']
 			self.reference_selector = lambda utt: (not utt.meta['is_question']) and (utt.reply_to is not None)
@@ -85,7 +85,9 @@ class PromptTypeWrapper(Transformer):
 			prompt_field = 'arcs'
 			prompt_transform_field = 'arcs'
 		pipe.append(
-			('pt_model', PromptTypes(prompt_field=prompt_field, reference_field='arcs', 
+			('pt_model', PromptTypes(prompt_field=prompt_field,
+									 n_types=n_types,
+									 reference_field='arcs',
 									 prompt_transform_field=prompt_transform_field,
 									 output_field=output_field, n_types=n_types,
 									 svd__n_components=svd__n_components,
@@ -98,7 +100,7 @@ class PromptTypeWrapper(Transformer):
 			))
 		)
 		self.pipe = ConvokitPipeline(pipe)
-		
+
 	def fit(self, corpus, y=None):
 		"""
 			Fits the model for a corpus -- that is, computes all necessary utterance attributes, and fits the underlying `PhrasingMotifs` and `PromptTypes` models.
@@ -107,9 +109,9 @@ class PromptTypeWrapper(Transformer):
 			:return: None
 		"""
 
-		self.pipe.fit(corpus, 
+		self.pipe.fit(corpus,
 				pt_model__prompt_selector=self.prompt_selector, pt_model__reference_selector=self.reference_selector)
-	
+
 	def transform(self, corpus):
 		"""
 			Computes prompt type assignments for utterances in a corpus.
@@ -119,7 +121,7 @@ class PromptTypeWrapper(Transformer):
 		"""
 
 		return self.pipe.transform(corpus)
-	
+
 	def transform_utterance(self, utterance):
 		"""
 			Computes prompt type assignments for individual utterances. can take as input ConvoKit Utterances or raw strings. will return assignments for *all* string input, even if the input is not a question.
@@ -131,11 +133,11 @@ class PromptTypeWrapper(Transformer):
 		if isinstance(utterance, str):
 			utterance = Utterance(text=utterance)
 			utterance.meta['is_question'] = True
-		return self.pipe.transform_utterance(utterance)        
-	
+		return self.pipe.transform_utterance(utterance)
+
 	def dump_model(self, model_dir, type_keys='default'):
 		"""
-			Writes the `PhrasingMotifs` (if applicable) and `PromptTypes` models to disk. 
+			Writes the `PhrasingMotifs` (if applicable) and `PromptTypes` models to disk.
 
 			:param model_dir: directory to write to.
 			:return: None
@@ -147,10 +149,10 @@ class PromptTypeWrapper(Transformer):
 		if self.use_motifs:
 			self.pipe.named_steps['pm_model'].dump_model(os.path.join(model_dir, 'pm_model'))
 		self.pipe.named_steps['pt_model'].dump_model(os.path.join(model_dir, 'pt_model'), type_keys=type_keys)
-	
+
 	def load_model(self, model_dir, type_keys='default'):
 		"""
-			Reads the `PhrasingMotifs` (if applicable) and `PromptTypes` models from disk. 
+			Reads the `PhrasingMotifs` (if applicable) and `PromptTypes` models from disk.
 
 			:param model_dir: directory to read from.
 			:return: None
@@ -166,7 +168,7 @@ class PromptTypeWrapper(Transformer):
 			* pm_model: PhrasingMotifs model (if applicable, i.e., use_motifs=True)
 			* pt_model: PromptTypes model
 
-		:param type_keys: which numbers of prompt types to return corresponding PromptTypes model for 
+		:param type_keys: which numbers of prompt types to return corresponding PromptTypes model for
 		:return: model
 		'''
 		to_return = {}
@@ -174,7 +176,7 @@ class PromptTypeWrapper(Transformer):
 			to_return['pm_model'] = self.pipe.named_steps['pm_model'].get_model()
 		to_return['pt_model'] = self.pipe.named_steps['pt_model'].get_model(type_keys=type_keys)
 		return to_return
-	
+
 	def print_top_phrasings(self, k):
 		"""
 			prints the k most frequent phrasings from the `PhrasingMotifs` component of the pipeline, if phrasings are used.
@@ -187,7 +189,7 @@ class PromptTypeWrapper(Transformer):
 			self.pipe.named_steps['pm_model'].print_top_phrasings(k)
 		else:
 			print('phrasing motifs unavailable')
-	
+
 	def display_type(self, type_id, corpus=None, type_key=None, k=10):
 		"""
 			for a particular prompt type, displays the representative prompt and response terms. can also display representative prompt and response utterances.
@@ -203,7 +205,7 @@ class PromptTypeWrapper(Transformer):
 
 	def summarize(self, corpus, type_ids=None, type_key=None, k=10):
 		'''
-		Displays representative prompt and response terms and utterances for each type learned. 
+		Displays representative prompt and response terms and utterances for each type learned.
 
 		:param corpus: corpus to display utterances for (must have `transform()` called on it)
 		:param type_ids: ID of the prompt type to display. if None, will display all types.
@@ -212,7 +214,7 @@ class PromptTypeWrapper(Transformer):
 		:return: None
 		'''
 		self.pipe.named_steps['pt_model'].summarize(corpus=corpus, type_ids=type_ids, type_key=type_key, k=k)
-	
+
 	def refit_types(self, n_types, random_state=None, name=None):
 		"""
 			infers a different number of prompt types than was originally called.
@@ -223,5 +225,4 @@ class PromptTypeWrapper(Transformer):
 			:return: None
 		"""
 		self.pipe.named_steps['pt_model'].refit_types(n_types, random_state, name)
-	
-	
+
