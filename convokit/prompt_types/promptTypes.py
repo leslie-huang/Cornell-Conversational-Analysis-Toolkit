@@ -751,9 +751,9 @@ def fit_prompt_embedding_model(
 
     try:
         print("saving raw inputs")
-        with open(f"ref_input_{rank_label}_{snip_label}.pkl", "wb") as f:
+        with open("ref_input.pkl", "wb") as f:
             pickle.dump(reference_input, f)
-        with open(f"prompt_input_{rank_label}_{snip_label}.pkl", "wb") as f:
+        with open("prompt_input.pkl", "wb") as f:
             pickle.dump(prompt_input, f)
     except:
         print("failed to save raw inputs")
@@ -781,27 +781,14 @@ def fit_prompt_embedding_model(
     prompt_vect = prompt_tfidf_model.fit_transform(prompt_input)
 
     ## LH start
-    try:
-        print("saving tf idf models")
-        with open(f"ref_tfidf_model_{rank_label}_{snip_label}.pkl", "wb") as f:
-            pickle.dump(reference_tfidf_model, f)
-        with open(
-            f"prompt_tfidf_model_{rank_label}_{snip_label}.pkl", "wb"
-        ) as f:
-            pickle.dump(prompt_tfidf_model, f)
-    except:
-        print("failed to save tf-idf models")
-
     # save model before svd
     try:
         print("saving unreduced, normalized matrix")
         np.savetxt(
-            f"unreduced_ref_matrix_{rank_label}_{snip_label}.npy.gz",
-            normalize(reference_vect.toarray()),
+            "unreduced_ref_matrix.npy.gz", normalize(reference_vect.toarray())
         )
         np.savetxt(
-            f"unreduced_prompt_matrix_{rank_label}_{snip_label}.npy.gz",
-            normalize(prompt_vect.toarray()),
+            "unreduced_prompt_matrix.npy.gz", normalize(prompt_vect.toarray())
         )
     except:
         print("failed to save matrix before SVD")
